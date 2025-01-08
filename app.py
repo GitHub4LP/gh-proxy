@@ -25,12 +25,10 @@ def keep_alive(service_url, interval=60):
     while True:
         try:
             response = requests.get(service_url)
-            if response.status_code == 200:
-                print(f"服务保活成功: {service_url}")
-            else:
-                print(f"服务保活失败: 状态码 {response.status_code}")
+            if not (200 <= response.status_code < 300):
+                print(f"请求失败: 状态码 {response.status_code}")
         except Exception as e:
-            print(f"无法访问服务 {service_url}: {e}")
+            print(f"无法访问 {service_url}: {e}")
         time.sleep(interval)
 
 # config
@@ -219,12 +217,10 @@ def proxy(u, allow_redirects=False):
         return Response('server error ' + str(e), status=500, headers=headers)
 
 if __name__ == '__main__':
-    # 获取服务地址
     SERVICE_URL = os.environ.get("SELF_URL")
     if SERVICE_URL:
-        # 启动保活任务线程，传入服务地址
         threading.Thread(target=keep_alive, args=(SERVICE_URL,), daemon=True).start()
-        print(f"启动保活任务，定期访问: {SERVICE_URL}")
+        print(f"{SERVICE_URL}")
     else:
-        print("环境变量 SERVICE_URL 未设置，不启动保活任务。")
+        print("环境变量未设置")
     app.run(host=HOST, port=PORT, debug=False)
