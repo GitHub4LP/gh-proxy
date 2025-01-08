@@ -227,4 +227,4 @@ if __name__ == '__main__':
         print(f"启动保活任务，定期访问: {SERVICE_URL}")
     else:
         print("环境变量 SERVICE_URL 未设置，不启动保活任务。")
-    app.run(host=HOST, port=PORT)
+    app.run(host=HOST, port=PORT，debug=False)
