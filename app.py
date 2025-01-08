@@ -1,8 +1,11 @@
 # -*- coding: utf-8 -*-
 import re
-
+import os
 import requests
-from flask import Flask, Response, redirect, request
+import time
+import threading
+
+from flask import Flask, Response, redirect, request, jsonify
 from requests.exceptions import (
     ChunkedEncodingError,
     ContentDecodingError, ConnectionError, StreamConsumedError)
@@ -11,6 +14,24 @@ from requests.utils import (
 from urllib3.exceptions import (
     DecodeError, ReadTimeoutError, ProtocolError)
 from urllib.parse import quote
+
+def keep_alive(service_url, interval=60):
+    """
+    定期访问指定地址以保活服务。
+
+    :param service_url: 服务的 URL 地址
+    :param interval: 访问间隔时间（秒）
+    """
+    while True:
+        try:
+            response = requests.get(service_url)
+            if response.status_code == 200:
+                print(f"服务保活成功: {service_url}")
+            else:
+                print(f"服务保活失败: 状态码 {response.status_code}")
+        except Exception as e:
+            print(f"无法访问服务 {service_url}: {e}")
+        time.sleep(interval)
 
 # config
 # 分支文件使用jsDelivr镜像的开关，0为关闭，默认关闭
@@ -51,6 +72,13 @@ exp5 = re.compile(r'^(?:https?://)?gist\.(?:githubusercontent|github)\.com/(?P<a
 
 requests.sessions.default_headers = lambda: CaseInsensitiveDict()
 
+@app.route('/config')
+def get_config():
+    # 定义要返回的 JSON 数据
+    config = {
+        "version": "5.10.0",
+    }
+    return jsonify(config)
 
 @app.route('/')
 def index():
@@ -190,6 +218,13 @@ def proxy(u, allow_redirects=False):
         headers['content-type'] = 'text/html; charset=UTF-8'
         return Response('server error ' + str(e), status=500, headers=headers)
 
-app.debug = True
 if __name__ == '__main__':
+    # 获取服务地址
+    SERVICE_URL = os.environ.get("SELF_URL")
+    if SERVICE_URL:
+        # 启动保活任务线程，传入服务地址
+        threading.Thread(target=keep_alive, args=(SERVICE_URL,), daemon=True).start()
+        print(f"启动保活任务，定期访问: {SERVICE_URL}")
+    else:
+        print("环境变量 SERVICE_URL 未设置，不启动保活任务。")
     app.run(host=HOST, port=PORT)
